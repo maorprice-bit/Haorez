@@ -903,7 +903,7 @@ function showToast(msg){const t=document.getElementById('toast');t.textContent=m
 // ===================== INIT =====================
 document.addEventListener('DOMContentLoaded',()=>{
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('/sw.js').catch(()=>{});
+    navigator.serviceWorker.register('/Haorez/sw.js').catch(()=>{});
   }
   // סגור תפריט פעולות בלחיצה מחוץ לו
   document.addEventListener('click', e => {

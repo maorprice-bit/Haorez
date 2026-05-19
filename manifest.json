@@ -2,7 +2,7 @@
   "name": "האורז החכם",
   "short_name": "האורז",
   "description": "רשימת אריזה חכמה לכל סוג טיול",
-  "start_url": "/",
+  "start_url": "/Haorez/",
   "display": "standalone",
   "background_color": "#1a1a2e",
   "theme_color": "#e07b39",

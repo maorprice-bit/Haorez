@@ -117,6 +117,9 @@ input[type=range]{flex:1;accent-color:var(--accent);cursor:pointer}
 .color-opt.selected{border-color:var(--ink);transform:scale(1.2);box-shadow:0 2px 8px rgba(0,0,0,.25)}
 .item-marker{font-size:.72rem;font-weight:700;padding:2px 7px;border-radius:10px;color:#fff;flex-shrink:0}
 .user-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;display:inline-block;margin-left:3px}
+.activity-opt{padding:14px 10px;border:2px solid #e0d6cc;border-radius:14px;background:#fff;cursor:pointer;font-family:'Heebo',sans-serif;font-size:.85rem;font-weight:700;color:var(--ink2);text-align:center;transition:all .18s;line-height:1.6}
+.activity-opt:hover{border-color:var(--accent);background:#fff8f2}
+.activity-opt.active{border-color:var(--accent);background:var(--accent);color:#fff}
 .scroll-top{width:42px;height:42px;border-radius:10px;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.15);font-size:1.2rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .18s;flex-shrink:0;}
 .scroll-top:hover{background:rgba(255,255,255,.14);color:#fff;}
 </style>
@@ -160,6 +163,11 @@ input[type=range]{flex:1;accent-color:var(--accent);cursor:pointer}
       <button class="trip-btn"        data-trip="שטח"  onclick="setTrip(this,'שטח')"> <span class="ti">🏕️</span>שטח</button>
       <button class="trip-btn"        data-trip="ים"   onclick="setTrip(this,'ים')">  <span class="ti">🌊</span>ים</button>
     </div>
+    <div style="margin-top:10px">
+      <button id="activityBtn" onclick="openActivityModal()" style="width:100%;padding:10px;border:2px dashed #e07b39;border-radius:12px;background:transparent;font-family:'Heebo',sans-serif;font-size:.85rem;font-weight:700;color:var(--accent);cursor:pointer;transition:all .18s">
+        🏃 בחר פעילות
+      </button>
+    </div>
   </div>
   <div class="section-card" style="padding:14px 18px">
     <div class="section-label">משך הטיול</div>
@@ -187,8 +195,8 @@ input[type=range]{flex:1;accent-color:var(--accent);cursor:pointer}
   </div>
   <div class="stats-row">
     <div class="stat-chip"><span class="sdot" style="background:var(--accent)"></span><span id="sTotal">0 פריטים</span></div>
-    <div class="stat-chip"><span class="sdot" style="background:var(--green)"></span><span id="sPacked">0 ארוזים</span></div>
-    <div class="stat-chip"><span class="sdot" style="background:#bbb"></span><span id="sLeft">0 נשארו</span></div>
+    <div class="stat-chip" onclick="filterByStatus('packed')" style="cursor:pointer" id="sPackedChip"><span class="sdot" style="background:var(--green)"></span><span id="sPacked">0 ארוזים</span></div>
+    <div class="stat-chip" onclick="filterByStatus('left')" style="cursor:pointer" id="sLeftChip"><span class="sdot" style="background:#bbb"></span><span id="sLeft">0 נשארו</span></div>
   </div>
   <div class="top-row">
     <div class="search-wrap">
@@ -210,7 +218,6 @@ input[type=range]{flex:1;accent-color:var(--accent);cursor:pointer}
   <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center">
     <button class="fbt" style="background:#3a7d44;color:#fff" onclick="checkAll();toggleActionMenu()">✅ סמן הכל</button>
     <button class="fbt" style="background:#64748b;color:#fff" onclick="uncheckAll();toggleActionMenu()">🔄 אפס</button>
-    <button class="fbt" id="checkedFilterBtn" style="background:#7c3aed;color:#fff" onclick="toggleCheckedFilter()">🎒 מה שארזתי</button>
     <button class="fbt" style="background:#0f766e;color:#fff" onclick="openShareModal();toggleActionMenu()">📤 שתף</button>
     <button class="fbt" style="background:#1e40af;color:#fff" onclick="window.print();toggleActionMenu()">🖨️ הדפס</button>
   </div>
@@ -291,6 +298,26 @@ input[type=range]{flex:1;accent-color:var(--accent);cursor:pointer}
     <div class="modal-actions" style="margin-top:14px">
       <button class="btn-cancel" style="width:100%" onclick="closeShareModal()">סגור</button>
     </div>
+  </div>
+</div>
+
+<!-- ACTIVITY MODAL -->
+<div class="modal-bg" id="activityModalBg" onclick="closeActivityModal(event)">
+  <div class="modal" style="padding:24px 20px 36px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <h3>🏃 בחר פעילות</h3>
+      <button onclick="closeActivityModal()" style="background:#f0ece6;border:none;font-size:1rem;cursor:pointer;color:#888;border-radius:8px;padding:4px 10px">✕</button>
+    </div>
+    <p style="font-size:.8rem;color:#999;margin-bottom:16px">ניתן לבחור מספר פעילויות — לחץ שוב לביטול</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <button class="activity-opt" data-act="צלילה" onclick="selectActivity(this,'צלילה')"><span style="font-size:1.8rem">🤿</span><br>צלילה וסנורקלינג</button>
+      <button class="activity-opt" data-act="אופניים" onclick="selectActivity(this,'אופניים')"><span style="font-size:1.8rem">🚴</span><br>רכיבה על אופניים</button>
+      <button class="activity-opt" data-act="סקי" onclick="selectActivity(this,'סקי')"><span style="font-size:1.8rem">⛷️</span><br>סקי וסנובורד</button>
+      <button class="activity-opt" data-act="טיפוס" onclick="selectActivity(this,'טיפוס')"><span style="font-size:1.8rem">🧗</span><br>טיפוס הרים</button>
+      <button class="activity-opt" data-act="ספורט מים" onclick="selectActivity(this,'ספורט מים')" style="grid-column:1/-1"><span style="font-size:1.8rem">🏄</span><br>ספורט מים</button>
+    </div>
+    <button onclick="clearActivity()" style="width:100%;margin-top:14px;padding:10px;background:#f0ece6;border:none;border-radius:10px;font-family:'Heebo',sans-serif;font-size:.85rem;font-weight:700;color:#888;cursor:pointer">✕ בטל הכל</button>
+    <button onclick="closeActivityModal()" style="width:100%;margin-top:8px;padding:10px;background:var(--accent);border:none;border-radius:10px;font-family:'Heebo',sans-serif;font-size:.9rem;font-weight:700;color:#fff;cursor:pointer">✓ אישור</button>
   </div>
 </div>
 
@@ -376,9 +403,7 @@ const BASE_ITEMS = (function(){
     ["טיפוח","משקפי ראייה"],
     ["טיפוח","משקפי שמש+ נרתיק"],
     ["טיפוח","כיסוי עיניים"],
-    ["טיפוח","מגבות"],
     ["טיפוח","מגבת"],
-    ["טיפוח","מגבת חוף"],
     ["טיפוח","מגבונים"],
     ["טיפוח","מגבונים לעיניים"],
     ["טיפוח","מגבונים לשירותים"],
@@ -493,6 +518,8 @@ const BASE_ITEMS = (function(){
     ["ציוד שטח וקמפינג","מחבת"],
     ["ציוד שטח וקמפינג",'סכו"ם'],
     ["ציוד שטח וקמפינג","כפות"],
+    ["ציוד שטח וקמפינג","לדרמן/אולר"],
+    ["ציוד שטח וקמפינג","פטיש לתקיעת יתדות"],
     ["ציוד שטח וקמפינג","סכין"],
     ["ציוד שטח וקמפינג","קרש חיתוך"],
     ["ציוד שטח וקמפינג","קולפן"],
@@ -517,6 +544,7 @@ const BASE_ITEMS = (function(){
     ["ציוד שטח וקמפינג","נפנף"],
     ["ציוד שטח וקמפינג","בקבוק חימום"],
     // 🏖️ ים ובריכה
+    ["ים ובריכה","מגבת חוף"],
     ["ים ובריכה","ציוד צלילה"],
     ["ים ובריכה","שנורקל"],
     ["ים ובריכה","סנפירים"],
@@ -760,13 +788,36 @@ function getVisible(){
     // בקבוק חימום — רק בעונה קרה
     if(COLD_ONLY_ITEMS.has(i.name)) seasonOk = (currentSeason==='קרה');
     const searchOk=!s||i.name.toLowerCase().includes(s)||i.cat.toLowerCase().includes(s);
-    // סינון ארוז בלבד
-    if(showOnlyChecked) return (isChecked(i.id)||isSkipped(i.id)) && searchOk;
+    // סינון לפי סטטוס
+    if(showOnlyChecked) return isChecked(i.id) && searchOk;
+    if(showOnlyLeft) return !isChecked(i.id) && !isSkipped(i.id) && searchOk;
     return tripOk&&familyOk&&seasonOk&&searchOk;
   });
 }
 let showAll=false;
 let showOnlyChecked=false;
+let showOnlyLeft=false;
+
+function filterByStatus(type){
+  if(type==='packed'){
+    showOnlyChecked = !showOnlyChecked;
+    showOnlyLeft = false;
+    const chip=document.getElementById('sPackedChip');
+    chip.style.background=showOnlyChecked?'var(--green)':'';
+    chip.style.color=showOnlyChecked?'#fff':'';
+    document.getElementById('sLeftChip').style.background='';
+    document.getElementById('sLeftChip').style.color='';
+  } else {
+    showOnlyLeft = !showOnlyLeft;
+    showOnlyChecked = false;
+    const chip=document.getElementById('sLeftChip');
+    chip.style.background=showOnlyLeft?'#64748b':'';
+    chip.style.color=showOnlyLeft?'#fff':'';
+    document.getElementById('sPackedChip').style.background='';
+    document.getElementById('sPackedChip').style.color='';
+  }
+  renderAll();
+}
 
 function toggleActionMenu(){
   const menu = document.getElementById('actionMenu');
@@ -776,18 +827,6 @@ function toggleActionMenu(){
   btn.textContent = isOpen ? '≡ פעולות' : '✕ סגור';
 }
 // סגור תפריט בלחיצה מחוץ לו — נרשם אחרי טעינת DOM
-function toggleCheckedFilter(){
-  showOnlyChecked = !showOnlyChecked;
-  const btn = document.getElementById('checkedFilterBtn');
-  if(showOnlyChecked){
-    btn.style.background='#4c1d95';
-    btn.textContent='📋 כל הרשימה';
-  } else {
-    btn.style.background='#7c3aed';
-    btn.textContent='🎒 מה שארזתי';
-  }
-  renderAll();
-}
 function setShowAll(btn){
   showAll=true;
   document.querySelectorAll('.trip-btn[data-trip]').forEach(b=>b.classList.remove('active'));
@@ -802,6 +841,17 @@ function setDuration(v){currentDuration=parseInt(v);document.getElementById('dur
 function save(){
   localStorage.setItem('ci_v5',JSON.stringify(customItems));
   localStorage.setItem('marks_v5',JSON.stringify(marks));
+}
+function toggleActivityItem(id, name){
+  if(isChecked(id)){ delete marks[id]; }
+  else { marks[id]={userId:myUserId,userName:myUserName,color:myUserColor,type:'check',name}; }
+  save(); broadcastUpdate(); renderAll();
+}
+function toggleActivitySkip(id, e){
+  e.stopPropagation();
+  if(isSkipped(id)){ delete marks[id]; }
+  else { marks[id]={userId:myUserId,userName:myUserName,color:myUserColor,type:'skip'}; }
+  save(); broadcastUpdate(); renderAll();
 }
 function toggleItem(id){
   if(isChecked(id)){ delete marks[id]; }
@@ -834,7 +884,47 @@ function renderAll(){
   const cats=[...new Set(items.map(i=>i.cat))];
   const container=document.getElementById('content');
   if(!cats.length){container.innerHTML='<div class="empty-state"><span class="big">🔍</span><p>לא נמצאו פריטים</p></div>';return;}
-  container.innerHTML=cats.map(cat=>{
+  // קטגוריות פעילויות — אם נבחרו
+  let activityHTML = '';
+  if(currentActivity.length > 0){
+    const actIcons = {"צלילה":"🤿","אופניים":"🚴","סקי":"⛷️","טיפוס":"🧗","ספורט מים":"🏄"};
+    const actNames = {"צלילה":"צלילה וסנורקלינג","אופניים":"רכיבה על אופניים","סקי":"סקי וסנובורד","טיפוס":"טיפוס הרים","ספורט מים":"ספורט מים"};
+    currentActivity.forEach(function(act){
+      if(!ACTIVITY_ITEMS[act]) return;
+      var actItems = ACTIVITY_ITEMS[act];
+      var catKey = 'activity_' + act;
+      var catName = actNames[act];
+      var icon = actIcons[act];
+      var isOpen = openCats.has(catKey);
+      var itemsHTML = '';
+      for(var ai=0; ai<actItems.length; ai++){
+        var aname = actItems[ai];
+        var aid = 'act_'+act+'_'+ai;
+        var amark = marks[aid]||null;
+        var achecked = amark && amark.type==='check';
+        var askipped = amark && amark.type==='skip';
+        var acolor = (amark && amark.color)||'';
+        var auname = (amark && amark.userName)||'';
+        var acheckStyle = achecked ? 'border-color:'+acolor+';background:'+acolor : '';
+        var askipStyle = askipped ? 'border-color:'+acolor+';background:#fff2f2;color:'+acolor : '';
+        var anameEsc = aname.replace(/'/g,"\\'");
+        itemsHTML += '<div class="item-row'+(achecked?' checked':'')+(askipped?' skipped':'')+'" onclick="toggleActivityItem(\''+aid+'\',\''+anameEsc+'\')">';
+        itemsHTML += '<div class="item-check" style="'+acheckStyle+'"></div>';
+        itemsHTML += '<span class="item-name">'+aname+'</span>';
+        if(auname && (achecked||askipped)) itemsHTML += '<span style="font-size:.7rem;color:'+acolor+';font-weight:700;flex-shrink:0">'+auname+'</span>';
+        itemsHTML += '<button class="item-skip" style="'+askipStyle+'" onclick="toggleActivitySkip(\''+aid+'\',event)">✕</button>';
+        itemsHTML += '</div>';
+      }
+      activityHTML += '<div class="cat-card" style="border-color:var(--accent);border-width:2px">';
+      activityHTML += '<div class="cat-header'+(isOpen?' open':'')+'" data-cat="'+catKey+'" onclick="toggleCat(this)" style="background:rgba(224,123,57,0.06)">';
+      activityHTML += '<span class="cat-icon-lbl">'+icon+'</span>';
+      activityHTML += '<span class="cat-name">'+catName+'</span>';
+      activityHTML += '<div class="cat-progress-wrap"><span class="cat-count">'+actItems.length+' פריטים</span></div>';
+      activityHTML += '<span class="chevron">▼</span></div>';
+      activityHTML += '<div class="cat-body'+(isOpen?' open':'')+'">'+itemsHTML+'</div></div>';
+    });
+  }
+  container.innerHTML = activityHTML + cats.map(cat=>{
     const ci=items.filter(i=>i.cat===cat).sort((a,b)=>a.name.localeCompare(b.name,'he'));
     const ch=ci.filter(i=>isChecked(i.id)).length;
     const pct=ci.length?Math.round(ch/ci.length*100):0;
@@ -884,6 +974,59 @@ function toggleCat(header){
 }
 
 // ===================== MODALS =====================
+// ===================== ACTIVITIES =====================
+const ACTIVITY_ITEMS = {
+  "צלילה": ["מסכת צלילה","שנורקל","סנפירים","ווסט הצפה","מצלמה תת-ימית","ספריי נגד אדים","נעלי ים","חליפת ים"],
+  "אופניים": ["קסדה","כפפות רכיבה","שלוקר","משקפי שמש לרכיבה","מכנסי רכיבה","חולצת רכיבה","בקבוק מים","ערכת תיקון פנימי","משאבה","מנעול לאופניים","נעלי רכיבה"],
+  "סקי": ["חליפת סקי","מגפי סקי","מקלות סקי","קסדת סקי","משקפי סקי","כפפות סקי","גרבי תרמיים","מסיכת פנים","קרם הגנה","מחממי ידיים"],
+  "טיפוס": ["ערכת טיפוס","חבל","רתמה","קסדה","נעלי טיפוס","אבקת מגנזיום","קרבינות","מצפן","GPS","ערכת עזרה ראשונה","מקלות הליכה"],
+  "ספורט מים": ["חליפת ים קצרה","ווסט הצלה","גלשן","משוט","ספריי נגד מלח","מגבת מיקרופייבר","תיק עמיד למים","כובע מים"]
+};
+let currentActivity = []; // מערך — ניתן לבחור מספר פעילויות
+
+function openActivityModal(){ document.getElementById('activityModalBg').classList.add('show'); }
+function closeActivityModal(e){ if(!e||e.target===document.getElementById('activityModalBg')) document.getElementById('activityModalBg').classList.remove('show'); }
+
+function selectActivity(btn, act){
+  const idx = currentActivity.indexOf(act);
+  if(idx >= 0){
+    // כבר נבחר — בטל בחירה
+    currentActivity.splice(idx, 1);
+    btn.classList.remove('active');
+  } else {
+    // הוסף לבחירה
+    currentActivity.push(act);
+    btn.classList.add('active');
+  }
+  // עדכן כפתור
+  const actBtn = document.getElementById('activityBtn');
+  const icons = {"צלילה":"🤿","אופניים":"🚴","סקי":"⛷️","טיפוס":"🧗","ספורט מים":"🏄"};
+  if(currentActivity.length === 0){
+    actBtn.textContent = '🏃 בחר פעילות';
+    actBtn.style.background = 'transparent';
+    actBtn.style.color = 'var(--accent)';
+    actBtn.style.borderStyle = 'dashed';
+  } else {
+    const label = currentActivity.map(a=>icons[a]).join(' ') + ' ' + currentActivity.join(', ') + ' ✓';
+    actBtn.textContent = label;
+    actBtn.style.background = 'var(--accent)';
+    actBtn.style.color = '#fff';
+    actBtn.style.borderStyle = 'solid';
+  }
+  renderAll();
+}
+
+function clearActivity(){
+  currentActivity = [];
+  const actBtn = document.getElementById('activityBtn');
+  actBtn.textContent = '🏃 בחר פעילות';
+  actBtn.style.background = 'transparent';
+  actBtn.style.color = 'var(--accent)';
+  actBtn.style.borderStyle = 'dashed';
+  document.querySelectorAll('.activity-opt').forEach(b=>b.classList.remove('active'));
+  closeActivityModal();
+  renderAll();
+}
 function openInfoModal(){ document.getElementById('infoModalBg').classList.add('show'); }
 function closeInfoModal(e){ if(!e||e.target===document.getElementById('infoModalBg')) document.getElementById('infoModalBg').classList.remove('show'); }
 function openAddModal(){document.getElementById('addModalBg').classList.add('show');setTimeout(()=>document.getElementById('newItemName').focus(),350);}

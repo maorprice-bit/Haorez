@@ -124,6 +124,7 @@ input[type=range]{flex:1;accent-color:var(--accent);cursor:pointer}
 .scroll-top:hover{background:rgba(255,255,255,.14);color:#fff;}
 </style>
 <link rel="manifest" href="manifest.json">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:">
 <meta name="theme-color" content="#e07b39">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -194,9 +195,10 @@ input[type=range]{flex:1;accent-color:var(--accent);cursor:pointer}
     </div>
   </div>
   <div class="stats-row">
-    <div class="stat-chip"><span class="sdot" style="background:var(--accent)"></span><span id="sTotal">0 פריטים</span></div>
-    <div class="stat-chip" onclick="filterByStatus('packed')" style="cursor:pointer" id="sPackedChip"><span class="sdot" style="background:var(--green)"></span><span id="sPacked">0 ארוזים</span></div>
-    <div class="stat-chip" onclick="filterByStatus('left')" style="cursor:pointer" id="sLeftChip"><span class="sdot" style="background:#bbb"></span><span id="sLeft">0 נשארו</span></div>
+    <div class="stat-chip" onclick="filterByStatusToggle('all')" style="cursor:pointer;transition:all .2s" id="sTotalChip"><span class="sdot" style="background:var(--accent)"></span><span id="sTotal">0 פריטים</span></div>
+    <div class="stat-chip" onclick="filterByStatusToggle('packed')" style="cursor:pointer;transition:all .2s" id="sPackedChip"><span class="sdot" style="background:var(--green)"></span><span id="sPacked">0 ארוזים</span></div>
+    <div class="stat-chip" onclick="filterByStatusToggle('left')" style="cursor:pointer;transition:all .2s" id="sLeftChip"><span class="sdot" style="background:#bbb"></span><span id="sLeft">0 נשארו</span></div>
+    <div class="stat-chip" onclick="filterByStatusToggle('skipped')" style="cursor:pointer;transition:all .2s" id="sSkippedChip"><span class="sdot" style="background:#ef4444"></span><span id="sSkipped">0 נמחקו</span></div>
   </div>
   <div class="top-row">
     <div class="search-wrap">
@@ -277,10 +279,10 @@ input[type=range]{flex:1;accent-color:var(--accent);cursor:pointer}
   <div class="modal">
     <h3>📤 שיתוף הרשימה</h3>
     <div class="share-options">
-      <div class="share-opt" onclick="shareWhatsApp()"><span class="so-icon">💬</span><div class="so-label">WhatsApp</div><div class="so-sub">שלח טקסט מסודר</div></div>
-      <div class="share-opt" onclick="copyLink()"><span class="so-icon">🔗</span><div class="so-label">העתק לינק</div><div class="so-sub">לינק עם כל הרשימה</div></div>
-      <div class="share-opt" onclick="window.print();closeShareModal()"><span class="so-icon">🖨️</span><div class="so-label">הדפסה / PDF</div><div class="so-sub">שמור כקובץ</div></div>
-      <div class="share-opt" onclick="copyText()"><span class="so-icon">📋</span><div class="so-label">העתק טקסט</div><div class="so-sub">לכל אפליקציה</div></div>
+      <button class="share-opt" onclick="shareWhatsApp()"><span class="so-icon">💬</span><div class="so-label">WhatsApp</div><div class="so-sub">שלח טקסט מסודר</div></button>
+      <button class="share-opt" onclick="copyLink()"><span class="so-icon">🔗</span><div class="so-label">העתק לינק</div><div class="so-sub">לינק עם כל הרשימה</div></button>
+      <button class="share-opt" onclick="window.print();closeShareModal()"><span class="so-icon">🖨️</span><div class="so-label">הדפסה / PDF</div><div class="so-sub">שמור כקובץ</div></button>
+      <button class="share-opt" onclick="copyText()"><span class="so-icon">📋</span><div class="so-label">העתק טקסט</div><div class="so-sub">לכל אפליקציה</div></button>
     </div>
     <div class="collab-section">
       <h4>👥 רשימה משותפת בזמן אמת</h4>
@@ -384,6 +386,7 @@ const BASE_ITEMS = (function(){
     ["טיפוח","סבון גוף"],
     ["טיפוח","מברשת שיניים"],
     ["טיפוח","מטען למברשת שיניים"],
+    ["טיפוח","חוט דנטלי"],
     ["טיפוח","משחת שיניים"],
     ["טיפוח","מברשת שיער"],
     ["טיפוח","סרקל"],
@@ -776,7 +779,10 @@ function getVisible(){
     const allowed=CAT_TRIPS_LOOKUP[i.cat];
     const tripOk=currentTrip==='all'||(allowed?allowed.includes(currentTrip):true);
     let familyOk=true;
-    if(currentFamily==='זוג')   familyOk=(i.cat!=='ילדים'&&i.cat!=='תינוק');
+    if(currentFamily==='זוג'){
+      familyOk=(i.cat!=='ילדים'&&i.cat!=='תינוק');
+      if(COUPLE_HIDE.has(i.name)) familyOk=false;
+    }
     if(currentFamily==='משפחה') familyOk=(i.cat!=='תינוק');
     // סינון לפי הרכב משפחתי לפריטים ספציפיים
     if(FAMILY_ITEMS[i.name]){
@@ -788,36 +794,52 @@ function getVisible(){
     // בקבוק חימום — רק בעונה קרה
     if(COLD_ONLY_ITEMS.has(i.name)) seasonOk = (currentSeason==='קרה');
     const searchOk=!s||i.name.toLowerCase().includes(s)||i.cat.toLowerCase().includes(s);
+    const baseOk=tripOk&&familyOk&&seasonOk&&searchOk;
     // סינון לפי סטטוס
-    if(showOnlyChecked) return isChecked(i.id) && searchOk;
-    if(showOnlyLeft) return !isChecked(i.id) && !isSkipped(i.id) && searchOk;
-    return tripOk&&familyOk&&seasonOk&&searchOk;
+    if(showOnlyAll) return !isSkipped(i.id) && baseOk;
+    if(showOnlyChecked) return isChecked(i.id) && baseOk;
+    if(showOnlyLeft) return !isChecked(i.id) && !isSkipped(i.id) && baseOk;
+    if(showOnlySkipped) return isSkipped(i.id) && searchOk;
+    // תצוגה רגילה — הסתר פריטים שסומנו X
+    if(isSkipped(i.id)) return false;
+    return baseOk;
   });
 }
 let showAll=false;
 let showOnlyChecked=false;
 let showOnlyLeft=false;
+let showOnlySkipped=false;
+let showOnlyAll=false;
 
-function filterByStatus(type){
-  if(type==='packed'){
-    showOnlyChecked = !showOnlyChecked;
-    showOnlyLeft = false;
-    const chip=document.getElementById('sPackedChip');
-    chip.style.background=showOnlyChecked?'var(--green)':'';
-    chip.style.color=showOnlyChecked?'#fff':'';
-    document.getElementById('sLeftChip').style.background='';
-    document.getElementById('sLeftChip').style.color='';
-  } else {
-    showOnlyLeft = !showOnlyLeft;
-    showOnlyChecked = false;
-    const chip=document.getElementById('sLeftChip');
-    chip.style.background=showOnlyLeft?'#64748b':'';
-    chip.style.color=showOnlyLeft?'#fff':'';
-    document.getElementById('sPackedChip').style.background='';
-    document.getElementById('sPackedChip').style.color='';
+function resetChips(){
+  ['sTotalChip','sPackedChip','sLeftChip','sSkippedChip'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.cssText='cursor:pointer;transition:all .2s';
+  });
+  showOnlyChecked=false; showOnlyLeft=false; showOnlySkipped=false; showOnlyAll=false;
+}
+
+function filterByStatusToggle(type){
+  const wasOn=(type==='all'&&showOnlyAll)||(type==='packed'&&showOnlyChecked)||(type==='left'&&showOnlyLeft)||(type==='skipped'&&showOnlySkipped);
+  resetChips();
+  if(!wasOn){
+    if(type==='all'){
+      showOnlyAll=true;
+      document.getElementById('sTotalChip').style.cssText='cursor:pointer;transition:all .2s;background:var(--accent);color:#fff;border-color:var(--accent)';
+    } else if(type==='packed'){
+      showOnlyChecked=true;
+      document.getElementById('sPackedChip').style.cssText='cursor:pointer;transition:all .2s;background:var(--green);color:#fff;border-color:var(--green)';
+    } else if(type==='left'){
+      showOnlyLeft=true;
+      document.getElementById('sLeftChip').style.cssText='cursor:pointer;transition:all .2s;background:#64748b;color:#fff;border-color:#64748b';
+    } else if(type==='skipped'){
+      showOnlySkipped=true;
+      document.getElementById('sSkippedChip').style.cssText='cursor:pointer;transition:all .2s;background:#ef4444;color:#fff;border-color:#ef4444';
+    }
   }
   renderAll();
 }
+function filterByStatus(type){ filterByStatusToggle(type); }
 
 function toggleActionMenu(){
   const menu = document.getElementById('actionMenu');
@@ -867,6 +889,7 @@ function toggleSkip(id,e){
   save(); broadcastUpdate(); renderAll();
 }
 function deleteCustom(id,e){e.stopPropagation();customItems=customItems.filter(i=>i.id!==id);delete marks[id];save();broadcastUpdate();renderAll();showToast('🗑️ נמחק');}
+const COUPLE_HIDE = new Set(["נובימול+ מזרק","טאבלט ילדים","מדחום אוזן","מי מלח"]);
 const WARM_HIDE = ["גרביונים","גרביים חמות","חולצה עבה","כפפות צמר","מחממי אוזניים","מכנסיים וחולצות תרמיות","מעיל","צעיפים","חם צוואר"];
 const COLD_HIDE = ["פנס מאוורר","סנדלים","מכנסיים קצרים","טייצים קצרים"];
 function checkAll(){getVisible().forEach(i=>{marks[i.id]={userId:myUserId,userName:myUserName,color:myUserColor,type:'check'};});save();broadcastUpdate();renderAll();}
@@ -875,12 +898,30 @@ function uncheckAll(){getVisible().forEach(i=>{delete marks[i.id];});save();broa
 // ===================== RENDER =====================
 function renderAll(){
   const items=getVisible();
-  const total=items.length;
-  const packed=items.filter(i=>isChecked(i.id)).length;
-  const skipped=items.filter(i=>isSkipped(i.id)).length;
+  const allVisible = showAll
+    ? allItems().filter(it => !isSkipped(it.id))
+    : allItems().filter(it => {
+        if(isSkipped(it.id)) return false;
+        const allowed=CAT_TRIPS_LOOKUP[it.cat];
+        const tripOk=currentTrip==='all'||(allowed?allowed.includes(currentTrip):true);
+        let familyOk=true;
+        if(currentFamily==='זוג'){ familyOk=(it.cat!=='ילדים'&&it.cat!=='תינוק'); if(COUPLE_HIDE.has(it.name)) familyOk=false; }
+        if(currentFamily==='משפחה') familyOk=(it.cat!=='תינוק');
+        if(FAMILY_ITEMS[it.name]) familyOk=familyOk&&FAMILY_ITEMS[it.name].includes(currentFamily);
+        let seasonOk=true;
+        if(currentSeason==='חמה') seasonOk=!WARM_HIDE.includes(it.name);
+        if(currentSeason==='קרה') seasonOk=!COLD_HIDE.includes(it.name);
+        if(COLD_ONLY_ITEMS.has(it.name)) seasonOk=(currentSeason==='קרה');
+        return tripOk&&familyOk&&seasonOk;
+      });
+  const total=allVisible.length;
+  const packed=allVisible.filter(it=>isChecked(it.id)).length;
+  const left=allVisible.filter(it=>!isChecked(it.id)).length;
+  const skippedCount=allItems().filter(it=>isSkipped(it.id)).length;
   document.getElementById('sTotal').textContent=total+' פריטים';
   document.getElementById('sPacked').textContent=packed+' ארוזים';
-  document.getElementById('sLeft').textContent=(total-packed-skipped)+' נשארו';
+  document.getElementById('sLeft').textContent=left+' נשארו';
+  document.getElementById('sSkipped').textContent=skippedCount+' נמחקו';
   const cats=[...new Set(items.map(i=>i.cat))];
   const container=document.getElementById('content');
   if(!cats.length){container.innerHTML='<div class="empty-state"><span class="big">🔍</span><p>לא נמצאו פריטים</p></div>';return;}
@@ -1034,9 +1075,53 @@ function closeAddModal(e){if(!e||e.target===document.getElementById('addModalBg'
 function saveItem(){const name=document.getElementById('newItemName').value.trim();if(!name){showToast('⚠️ נא להכניס שם');return;}const cat=document.getElementById('newItemCat').value;const qty=document.getElementById('newItemQty').value.trim();customItems.push({id:Date.now(),cat,name,qty,custom:true});openCats.add(cat);save();broadcastUpdate();closeAddModal();renderAll();showToast('✅ "'+name+'" נוסף!');}
 function openShareModal(){document.getElementById('shareModalBg').classList.add('show');if(collabCode)document.getElementById('collabCodeDisplay').value=collabCode;}
 function closeShareModal(e){if(!e||e.target===document.getElementById('shareModalBg'))document.getElementById('shareModalBg').classList.remove('show');}
-function shareWhatsApp(){const items=getVisible();const cats=[...new Set(items.map(i=>i.cat))];let text='🎒 *רשימת אריזה - האורז החכם*\n\n';cats.forEach(cat=>{text+=`*${CAT_ICONS[cat]||'📦'} ${cat}*\n`;items.filter(i=>i.cat===cat).forEach(item=>{text+=(isChecked(i.id)?'✅ ':'⬜ ')+item.name+'\n';});text+='\n';});const p=items.filter(i=>isChecked(i.id)).length;text+=`_${p}/${items.length} ארוזים_`;window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');closeShareModal();}
-function copyText(){const items=getVisible();const cats=[...new Set(items.map(i=>i.cat))];let text='🎒 רשימת אריזה\n\n';cats.forEach(cat=>{text+=`${CAT_ICONS[cat]||'📦'} ${cat}\n`;items.filter(i=>i.cat===cat).forEach(item=>{text+=(isChecked(i.id)?'[✓] ':'[ ] ')+item.name+'\n';});text+='\n';});navigator.clipboard.writeText(text).then(()=>{showToast('📋 הועתק!');closeShareModal();});}
-function copyLink(){const state={cust:customItems};const url=location.href.split('#')[0]+'#'+btoa(unescape(encodeURIComponent(JSON.stringify(state))));navigator.clipboard.writeText(url).then(()=>{showToast('🔗 לינק הועתק!');closeShareModal();});}
+function copyToClipboard(text, successMsg){
+  if(navigator.clipboard && window.isSecureContext){
+    navigator.clipboard.writeText(text).then(()=>showToast(successMsg)).catch(()=>fallbackCopy(text,successMsg));
+  } else { fallbackCopy(text,successMsg); }
+}
+function fallbackCopy(text, msg){
+  const ta=document.createElement('textarea');
+  ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  try{ document.execCommand('copy'); showToast(msg); }
+  catch(e){ showToast('⚠️ העתקה לא הצליחה'); }
+  document.body.removeChild(ta);
+}
+function shareWhatsApp(){
+  const sitems=getVisible();
+  const scats=[...new Set(sitems.map(it=>it.cat))];
+  let text='🎒 *רשימת אריזה - האורז החכם*\n\n';
+  scats.forEach(cat=>{
+    const catItems=sitems.filter(it=>it.cat===cat).sort((a,b)=>a.name.localeCompare(b.name,'he'));
+    text+='*'+(CAT_ICONS[cat]||'📦')+' '+cat+'*\n';
+    catItems.forEach(it=>{text+=(isChecked(it.id)?'✅ ':'⬜ ')+it.name+'\n';});
+    text+='\n';
+  });
+  const p=sitems.filter(it=>isChecked(it.id)).length;
+  text+='_'+p+'/'+sitems.length+' ארוזים_';
+  const waUrl='https://wa.me/?text='+encodeURIComponent(text);
+  window.open(waUrl,'_blank');
+  closeShareModal();
+}
+function copyText(){
+  const sitems=getVisible();
+  const scats=[...new Set(sitems.map(it=>it.cat))];
+  let text='🎒 רשימת אריזה\n\n';
+  scats.forEach(cat=>{
+    const catItems=sitems.filter(it=>it.cat===cat).sort((a,b)=>a.name.localeCompare(b.name,'he'));
+    text+=(CAT_ICONS[cat]||'📦')+' '+cat+'\n';
+    catItems.forEach(it=>{text+=(isChecked(it.id)?'[✓] ':'[ ] ')+it.name+'\n';});
+    text+='\n';
+  });
+  copyToClipboard(text,'📋 הועתק!');
+  closeShareModal();
+}
+function copyLink(){
+  const url=location.href.split('#')[0];
+  copyToClipboard(url,'🔗 לינק הועתק!');
+  closeShareModal();
+}
 function loadFromHash(){const hash=location.hash.slice(1);if(!hash)return;try{const s=JSON.parse(decodeURIComponent(escape(atob(hash))));if(s.cust)customItems=s.cust;save();showToast('📥 רשימה נטענה!');}catch(e){}}
 // כפתור חזרה למעלה — תמיד נראה
 
